@@ -7,30 +7,30 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "./IKoffeeSwapRouter.sol";
-import "./IKoffeeSwapFactory.sol";
+import "./IPangolinRouter.sol";
+import "./IPangolinFactory.sol";
 
 
-contract KuDoge is ERC20, Ownable {
+contract Apevax is ERC20, Ownable {
     using Address for address;
     
-    //Mainnet router 0xc0fFee0000C824D24E0F280f1e4D21152625742b
-    IKoffeeSwapRouter public router;
+    //Mainnet router 0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106
+    IPangolinRouter public router;
     address public pair;
     
     bool private _liquidityMutex = false;
     uint256 public _tokenLiquidityThreshold = 5000000e18;
     bool public ProvidingLiquidity = false;
    
-    uint16 public feeliq = 60;
+    uint16 public feeliq = 30;
     uint16 public feeburn = 20;
-    uint16 public feedev = 10;
+    uint16 public feedev = 50;
     uint16 constant internal DIV = 1000;
     
     uint16 public feesum = feeliq + feeburn + feedev;
     uint16 public feesum_ex = feeliq + feedev;
     
-    address payable public devwallet = payable(0xbBa2FA1d6FCA5A6A28DC6E5D27ECE24494BC24e6);
+    address payable public devwallet = payable(0xd829F35a90232228266651f82b0Fe34DCcd7912a);
 
     uint256 public transferlimit;
 
@@ -50,7 +50,7 @@ contract KuDoge is ERC20, Ownable {
         }
     }
     
-    constructor() ERC20("KuDoge", "KuDo") {
+    constructor() ERC20("Apevax", "APX") {
         _mint(msg.sender, 1e15 * 10 ** decimals());      
         transferlimit = 5e12 * 10 ** decimals();
         exemptTransferlimit[msg.sender] = true;
@@ -102,17 +102,17 @@ contract KuDoge is ERC20, Ownable {
             uint256 exchangeAmount = contractBalance / 2;
             uint256 exchangeAmountOtherHalf = contractBalance - exchangeAmount;
 
-            //exchange to KCS
+            //exchange to AVAX
             exchangeTokenToNativeCurrency(exchangeAmount);
-            uint256 kcs = address(this).balance;
+            uint256 avax = address(this).balance;
             
-            uint256 KCS_dev = kcs * feedev / feesum_ex;
+            uint256 AVAX_dev = avax * feedev / feesum_ex;
             
-            //send KCS to dev
-            sendKCSToDev(KCS_dev);
+            //send AVAX to dev
+            sendAVAXToDev(AVAX_dev);
             
             //add liquidity
-            addToLiquidityPool(exchangeAmountOtherHalf, kcs - KCS_dev);
+            addToLiquidityPool(exchangeAmountOtherHalf, avax - AVAX_dev);
             
         }
     }
@@ -120,25 +120,25 @@ contract KuDoge is ERC20, Ownable {
     function exchangeTokenToNativeCurrency(uint256 tokenAmount) private {
         address[] memory path = new address[](2);
         path[0] = address(this);
-        path[1] = router.WKCS();
+        path[1] = router.WAVAX();
 
         _approve(address(this), address(router), tokenAmount);
-        router.swapExactTokensForKCSSupportingFeeOnTransferTokens(tokenAmount, 0, path, address(this), block.timestamp);
+        router.swapExactTokensForAVAXSupportingFeeOnTransferTokens(tokenAmount, 0, path, address(this), block.timestamp);
     }
 
     function addToLiquidityPool(uint256 tokenAmount, uint256 nativeAmount) private {
         _approve(address(this), address(router), tokenAmount);
         //provide liquidity and send lP tokens to zero
-        router.addLiquidityKCS{value: nativeAmount}(address(this), tokenAmount, 0, 0, address(this), block.timestamp);
+        router.addLiquidityAVAX{value: nativeAmount}(address(this), tokenAmount, 0, 0, address(this), block.timestamp);
     }    
     
     function setRouterAddress(address newRouter) external onlyOwner {
         //give the option to change the router down the line 
-        IKoffeeSwapRouter _newRouter = IKoffeeSwapRouter(newRouter);
-        address get_pair = IKoffeeSwapFactory(_newRouter.factory()).getPair(address(this), _newRouter.WKCS());
+        IPangolinRouter _newRouter = IPangolinRouter(newRouter);
+        address get_pair = IPangolinFactory(_newRouter.factory()).getPair(address(this), _newRouter.WAVAX());
         //checks if pair already exists
         if (get_pair == address(0)) {
-            pair = IKoffeeSwapFactory(_newRouter.factory()).createPair(address(this), _newRouter.WKCS());
+            pair = IPangolinFactory(_newRouter.factory()).createPair(address(this), _newRouter.WAVAX());
         }
         else {
             pair = get_pair;
@@ -146,8 +146,8 @@ contract KuDoge is ERC20, Ownable {
         router = _newRouter;
     }    
     
-    function sendKCSToDev(uint256 amount) private {
-        //transfers KCS out of contract to devwallet
+    function sendAVAXToDev(uint256 amount) private {
+        //transfers AVAX out of contract to devwallet
         devwallet.transfer(amount);
     }
     
@@ -198,4 +198,3 @@ contract KuDoge is ERC20, Ownable {
     // fallbacks
     receive() external payable {}
     
-}
